@@ -10,6 +10,9 @@ import UserManagement from "./pages/UserManagement";
 import Courses from "./pages/Courses";
 import Schedule from "./pages/Schedule";
 import Quizzes from "./pages/Quizzes";
+import QuizTake from "./pages/QuizTake";
+import QuizEdit from "./pages/QuizEdit";
+import CourseDetail from "./pages/CourseDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
           <Route path="/courses" element={<Courses />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/quizzes" element={<Quizzes />} />
+          <Route path="/quiz/take/:id" element={<QuizTake />} />
+          <Route path="/quiz/edit/:id" element={<QuizEdit />} />
+          <Route path="/courses/:id" element={<CourseDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
