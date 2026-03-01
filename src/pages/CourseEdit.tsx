@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,7 @@ const CourseEdit = () => {
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [addingLessonToModule, setAddingLessonToModule] = useState<number | null>(null);
   const [newLesson, setNewLesson] = useState({ title: "", type: "video" as Lesson["type"], duration: "" });
+  const [editingLesson, setEditingLesson] = useState<{ moduleId: number; lesson: Lesson } | null>(null);
 
   const toggleModule = (moduleId: number) => {
     setModules(modules.map(m => m.id === moduleId ? { ...m, isExpanded: !m.isExpanded } : m));
@@ -111,6 +113,19 @@ const CourseEdit = () => {
       ? { ...m, lessons: m.lessons.filter(l => l.id !== lessonId) }
       : m
     ));
+  };
+
+  const updateLesson = (moduleId: number, lessonId: number, updated: Partial<Lesson>) => {
+    setModules(modules.map(m => m.id === moduleId
+      ? { ...m, lessons: m.lessons.filter(l => l.id === lessonId ? Object.assign(l, updated) || true : true) }
+      : m
+    ));
+  };
+
+  const saveEditingLesson = () => {
+    if (!editingLesson) return;
+    updateLesson(editingLesson.moduleId, editingLesson.lesson.id, editingLesson.lesson);
+    setEditingLesson(null);
   };
 
   const totalLessons = modules.reduce((a, m) => a + m.lessons.length, 0);
@@ -248,7 +263,9 @@ const CourseEdit = () => {
                         )}
                         <span className="text-xs text-muted-foreground">{lesson.duration}</span>
                         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
-                          <Button variant="ghost" size="icon" className="h-7 w-7"><Edit className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingLesson({ moduleId: mod.id, lesson: { ...lesson } })}>
+                            <Edit className="h-3 w-3" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLesson(mod.id, lesson.id)}>
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -308,6 +325,76 @@ const CourseEdit = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Lesson Dialog */}
+      <Dialog open={!!editingLesson} onOpenChange={open => !open && setEditingLesson(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Lesson</DialogTitle>
+          </DialogHeader>
+          {editingLesson && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Lesson Title</label>
+                <Input
+                  value={editingLesson.lesson.title}
+                  onChange={e => setEditingLesson({ ...editingLesson, lesson: { ...editingLesson.lesson, title: e.target.value } })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Type</label>
+                  <Select
+                    value={editingLesson.lesson.type}
+                    onValueChange={v => setEditingLesson({ ...editingLesson, lesson: { ...editingLesson.lesson, type: v as Lesson["type"] } })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="video">Video</SelectItem>
+                      <SelectItem value="article">Article</SelectItem>
+                      <SelectItem value="pdf">PDF</SelectItem>
+                      <SelectItem value="slide">Slide</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Duration</label>
+                  <Input
+                    value={editingLesson.lesson.duration}
+                    onChange={e => setEditingLesson({ ...editingLesson, lesson: { ...editingLesson.lesson, duration: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">File</label>
+                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors">
+                  <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-xs text-muted-foreground">
+                    {editingLesson.lesson.fileName || "Upload video, PDF, or slide file"}
+                  </p>
+                </div>
+              </div>
+              {editingLesson.lesson.type === "article" && (
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Content</label>
+                  <textarea
+                    className="w-full rounded-md border border-input bg-background p-3 text-sm min-h-[120px] focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={editingLesson.lesson.content || ""}
+                    onChange={e => setEditingLesson({ ...editingLesson, lesson: { ...editingLesson.lesson, content: e.target.value } })}
+                    placeholder="Write article content..."
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingLesson(null)}>Cancel</Button>
+            <Button className="gradient-primary text-primary-foreground" onClick={saveEditingLesson}>
+              <Save className="h-4 w-4 mr-1" /> Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
