@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Search, Plus, Users, Clock, BookOpen } from "lucide-react";
+import { Search, Plus, Users, Clock, BookOpen, Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const courses = [
   { id: 1, title: "Introduction to React", category: "Web Development", students: 156, duration: "8 weeks", progress: 78, status: "Active", lessons: 24 },
@@ -21,6 +22,7 @@ const statusStyles: Record<string, string> = {
 };
 
 const Courses = () => {
+  const navigate = useNavigate();
   return (
     <DashboardLayout title="Course Management">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -35,7 +37,7 @@ const Courses = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {courses.map((course) => (
-          <Card key={course.id} className="shadow-card hover:shadow-card-hover transition-all group cursor-pointer">
+          <Card key={course.id} className="shadow-card hover:shadow-card-hover transition-all group cursor-pointer" onClick={() => navigate(`/courses/${course.id}`)}>
             <CardContent className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <span className="text-xs text-muted-foreground font-medium">{course.category}</span>
@@ -60,6 +62,9 @@ const Courses = () => {
                   <span className="font-medium">{course.progress}%</span>
                 </div>
                 <Progress value={course.progress} className="h-2" />
+                <Button variant="ghost" size="sm" className="w-full mt-3 text-xs" onClick={(e) => { e.stopPropagation(); navigate(`/courses/${course.id}/edit`); }}>
+                  <Edit className="h-3.5 w-3.5 mr-1" /> Edit Course
+                </Button>
               </div>
             </CardContent>
           </Card>

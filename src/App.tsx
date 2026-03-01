@@ -13,6 +13,10 @@ import Quizzes from "./pages/Quizzes";
 import QuizTake from "./pages/QuizTake";
 import QuizEdit from "./pages/QuizEdit";
 import CourseDetail from "./pages/CourseDetail";
+import CourseEdit from "./pages/CourseEdit";
+import StudentCourses from "./pages/StudentCourses";
+import StudentCourseDetail from "./pages/StudentCourseDetail";
+import LessonPlayer from "./pages/LessonPlayer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,11 +34,15 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="/courses" element={<Courses />} />
+          <Route path="/courses/:id" element={<CourseDetail />} />
+          <Route path="/courses/:id/edit" element={<CourseEdit />} />
           <Route path="/schedule" element={<Schedule />} />
           <Route path="/quizzes" element={<Quizzes />} />
           <Route path="/quiz/take/:id" element={<QuizTake />} />
           <Route path="/quiz/edit/:id" element={<QuizEdit />} />
-          <Route path="/courses/:id" element={<CourseDetail />} />
+          <Route path="/my-courses" element={<StudentCourses />} />
+          <Route path="/learn/:id" element={<StudentCourseDetail />} />
+          <Route path="/learn/:courseId/lesson/:lessonId" element={<LessonPlayer />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

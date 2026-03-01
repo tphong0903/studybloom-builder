@@ -79,7 +79,7 @@ const CourseDetail = () => {
                   <h2 className="font-display font-bold text-2xl text-foreground">{courseData.title}</h2>
                   <p className="text-muted-foreground text-sm mt-1">{courseData.category} · {courseData.instructor}</p>
                 </div>
-                <Button variant="outline" size="sm"><Edit className="h-4 w-4 mr-1" /> Edit</Button>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/courses/${courseData.id}/edit`)}><Edit className="h-4 w-4 mr-1" /> Edit</Button>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">{courseData.description}</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">

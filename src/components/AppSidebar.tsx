@@ -23,7 +23,8 @@ import {
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Courses", url: "/courses", icon: BookOpen },
+  { title: "My Courses", url: "/my-courses", icon: GraduationCap },
+  { title: "Course Mgmt", url: "/courses", icon: BookOpen },
   { title: "Schedule", url: "/schedule", icon: Calendar },
   { title: "Quizzes & Tests", url: "/quizzes", icon: ClipboardCheck },
 ];
