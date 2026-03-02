@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import {
   Upload, ChevronDown, ChevronUp, Save, Eye, BookOpen, Settings
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 
 interface Lesson {
   id: number;
@@ -117,7 +118,7 @@ const CourseEdit = () => {
 
   const updateLesson = (moduleId: number, lessonId: number, updated: Partial<Lesson>) => {
     setModules(modules.map(m => m.id === moduleId
-      ? { ...m, lessons: m.lessons.filter(l => l.id === lessonId ? Object.assign(l, updated) || true : true) }
+      ? { ...m, lessons: m.lessons.map(l => l.id === lessonId ? { ...l, ...updated } : l) }
       : m
     ));
   };
@@ -127,6 +128,37 @@ const CourseEdit = () => {
     updateLesson(editingLesson.moduleId, editingLesson.lesson.id, editingLesson.lesson);
     setEditingLesson(null);
   };
+
+  const onDragEnd = useCallback((result: DropResult) => {
+    const { source, destination, type } = result;
+    if (!destination) return;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    if (type === "MODULE") {
+      setModules(prev => {
+        const updated = [...prev];
+        const [moved] = updated.splice(source.index, 1);
+        updated.splice(destination.index, 0, moved);
+        return updated;
+      });
+    } else if (type === "LESSON") {
+      const sourceModuleId = parseInt(source.droppableId.replace("lessons-", ""));
+      const destModuleId = parseInt(destination.droppableId.replace("lessons-", ""));
+
+      setModules(prev => {
+        const updated = prev.map(m => ({ ...m, lessons: [...m.lessons] }));
+        const srcMod = updated.find(m => m.id === sourceModuleId)!;
+        const destMod = updated.find(m => m.id === destModuleId)!;
+        const [moved] = srcMod.lessons.splice(source.index, 1);
+        destMod.lessons.splice(destination.index, 0, moved);
+        // Auto-expand destination module
+        if (sourceModuleId !== destModuleId) {
+          destMod.isExpanded = true;
+        }
+        return updated;
+      });
+    }
+  }, []);
 
   const totalLessons = modules.reduce((a, m) => a + m.lessons.length, 0);
 
@@ -214,103 +246,141 @@ const CourseEdit = () => {
             </div>
           </div>
 
-          {modules.map((mod, mi) => (
-            <Card key={mod.id} className="shadow-card overflow-hidden">
-              <div
-                className="flex items-center gap-3 p-4 bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
-                onClick={() => toggleModule(mod.id)}
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-6">#{mi + 1}</span>
-                {editingModuleId === mod.id ? (
-                  <Input
-                    autoFocus
-                    defaultValue={mod.title}
-                    onClick={e => e.stopPropagation()}
-                    onBlur={e => {
-                      setModules(modules.map(m => m.id === mod.id ? { ...m, title: e.target.value } : m));
-                      setEditingModuleId(null);
-                    }}
-                    onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-                    className="h-8 text-sm"
-                  />
-                ) : (
-                  <span className="font-medium flex-1">{mod.title}</span>
-                )}
-                <Badge variant="secondary" className="text-xs">{mod.lessons.length} lessons</Badge>
-                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingModuleId(mod.id)}>
-                    <Edit className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteModule(mod.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="modules" type="MODULE">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-4">
+                  {modules.map((mod, mi) => (
+                    <Draggable key={mod.id} draggableId={`module-${mod.id}`} index={mi}>
+                      {(provided, snapshot) => (
+                        <Card
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`shadow-card overflow-hidden ${snapshot.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}
+                        >
+                          <div
+                            className="flex items-center gap-3 p-4 bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
+                            onClick={() => toggleModule(mod.id)}
+                          >
+                            <div {...provided.dragHandleProps} onClick={e => e.stopPropagation()}>
+                              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab shrink-0" />
+                            </div>
+                            <span className="text-xs font-medium text-muted-foreground w-6">#{mi + 1}</span>
+                            {editingModuleId === mod.id ? (
+                              <Input
+                                autoFocus
+                                defaultValue={mod.title}
+                                onClick={e => e.stopPropagation()}
+                                onBlur={e => {
+                                  setModules(modules.map(m => m.id === mod.id ? { ...m, title: e.target.value } : m));
+                                  setEditingModuleId(null);
+                                }}
+                                onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                                className="h-8 text-sm"
+                              />
+                            ) : (
+                              <span className="font-medium flex-1">{mod.title}</span>
+                            )}
+                            <Badge variant="secondary" className="text-xs">{mod.lessons.length} lessons</Badge>
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingModuleId(mod.id)}>
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteModule(mod.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            {mod.isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+
+                          {mod.isExpanded && (
+                            <CardContent className="pt-2 pb-3">
+                              <Droppable droppableId={`lessons-${mod.id}`} type="LESSON">
+                                {(lessonProvided, lessonSnapshot) => (
+                                  <div
+                                    ref={lessonProvided.innerRef}
+                                    {...lessonProvided.droppableProps}
+                                    className={`space-y-1 min-h-[8px] rounded-md transition-colors ${lessonSnapshot.isDraggingOver ? "bg-primary/5" : ""}`}
+                                  >
+                                    {mod.lessons.map((lesson, li) => (
+                                      <Draggable key={lesson.id} draggableId={`lesson-${lesson.id}`} index={li}>
+                                        {(lessonDragProvided, lessonDragSnapshot) => (
+                                          <div
+                                            ref={lessonDragProvided.innerRef}
+                                            {...lessonDragProvided.draggableProps}
+                                            className={`flex items-center gap-3 p-2.5 rounded-lg hover:bg-secondary/40 transition-colors group ${lessonDragSnapshot.isDragging ? "bg-background shadow-md ring-1 ring-primary/30" : ""}`}
+                                          >
+                                            <div {...lessonDragProvided.dragHandleProps}>
+                                              <GripVertical className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab" />
+                                            </div>
+                                            <span className="text-xs text-muted-foreground w-4">{li + 1}</span>
+                                            <span className={typeConfig[lesson.type].color}>{typeConfig[lesson.type].icon}</span>
+                                            <span className="flex-1 text-sm">{lesson.title}</span>
+                                            {lesson.fileName && (
+                                              <Badge variant="outline" className="text-xs font-normal">{lesson.fileName}</Badge>
+                                            )}
+                                            <span className="text-xs text-muted-foreground">{lesson.duration}</span>
+                                            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
+                                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingLesson({ moduleId: mod.id, lesson: { ...lesson } })}>
+                                                <Edit className="h-3 w-3" />
+                                              </Button>
+                                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLesson(mod.id, lesson.id)}>
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                    {lessonProvided.placeholder}
+                                  </div>
+                                )}
+                              </Droppable>
+
+                              {addingLessonToModule === mod.id ? (
+                                <div className="mt-3 p-3 rounded-lg border border-border bg-secondary/20 space-y-3">
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <Input
+                                      placeholder="Lesson title"
+                                      value={newLesson.title}
+                                      onChange={e => setNewLesson({ ...newLesson, title: e.target.value })}
+                                    />
+                                    <Select value={newLesson.type} onValueChange={v => setNewLesson({ ...newLesson, type: v as Lesson["type"] })}>
+                                      <SelectTrigger><SelectValue /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="video">Video</SelectItem>
+                                        <SelectItem value="article">Article</SelectItem>
+                                        <SelectItem value="pdf">PDF</SelectItem>
+                                        <SelectItem value="slide">Slide</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <Input placeholder="Duration (e.g. 15 min)" value={newLesson.duration} onChange={e => setNewLesson({ ...newLesson, duration: e.target.value })} />
+                                  </div>
+                                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors">
+                                    <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                                    <p className="text-xs text-muted-foreground">Upload video, PDF, or slide file</p>
+                                  </div>
+                                  <div className="flex gap-2 justify-end">
+                                    <Button variant="outline" size="sm" onClick={() => setAddingLessonToModule(null)}>Cancel</Button>
+                                    <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => addLesson(mod.id)}>Add Lesson</Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground mt-2" onClick={() => setAddingLessonToModule(mod.id)}>
+                                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
+                                </Button>
+                              )}
+                            </CardContent>
+                          )}
+                        </Card>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
-                {mod.isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </div>
-
-              {mod.isExpanded && (
-                <CardContent className="pt-2 pb-3">
-                  <div className="space-y-1">
-                    {mod.lessons.map((lesson, li) => (
-                      <div key={lesson.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-secondary/40 transition-colors group">
-                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab" />
-                        <span className="text-xs text-muted-foreground w-4">{li + 1}</span>
-                        <span className={typeConfig[lesson.type].color}>{typeConfig[lesson.type].icon}</span>
-                        <span className="flex-1 text-sm">{lesson.title}</span>
-                        {lesson.fileName && (
-                          <Badge variant="outline" className="text-xs font-normal">{lesson.fileName}</Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">{lesson.duration}</span>
-                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingLesson({ moduleId: mod.id, lesson: { ...lesson } })}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLesson(mod.id, lesson.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {addingLessonToModule === mod.id ? (
-                    <div className="mt-3 p-3 rounded-lg border border-border bg-secondary/20 space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <Input
-                          placeholder="Lesson title"
-                          value={newLesson.title}
-                          onChange={e => setNewLesson({ ...newLesson, title: e.target.value })}
-                        />
-                        <Select value={newLesson.type} onValueChange={v => setNewLesson({ ...newLesson, type: v as Lesson["type"] })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="video">Video</SelectItem>
-                            <SelectItem value="article">Article</SelectItem>
-                            <SelectItem value="pdf">PDF</SelectItem>
-                            <SelectItem value="slide">Slide</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input placeholder="Duration (e.g. 15 min)" value={newLesson.duration} onChange={e => setNewLesson({ ...newLesson, duration: e.target.value })} />
-                      </div>
-                      <div className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors">
-                        <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
-                        <p className="text-xs text-muted-foreground">Upload video, PDF, or slide file</p>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" size="sm" onClick={() => setAddingLessonToModule(null)}>Cancel</Button>
-                        <Button size="sm" className="gradient-primary text-primary-foreground" onClick={() => addLesson(mod.id)}>Add Lesson</Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground mt-2" onClick={() => setAddingLessonToModule(mod.id)}>
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
-                    </Button>
-                  )}
-                </CardContent>
               )}
-            </Card>
-          ))}
+            </Droppable>
+          </DragDropContext>
 
           {/* Add new module */}
           <Card className="shadow-card border-dashed">
