@@ -9,10 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Plus, GripVertical, Edit, Trash2, Video, FileText, Image,
-  Upload, ChevronDown, ChevronUp, Save, Eye, BookOpen, Settings
+  Upload, ChevronDown, ChevronUp, Save, Eye, BookOpen, Settings, Users
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
+import { useToast } from "@/hooks/use-toast";
+import StudentManagement from "@/components/StudentManagement";
 
 interface Lesson {
   id: number;
@@ -77,6 +79,7 @@ const typeConfig: Record<string, { icon: React.ReactNode; label: string; color: 
 const CourseEdit = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { toast } = useToast();
   const [course, setCourse] = useState(initialCourse);
   const [modules, setModules] = useState<Module[]>(initialModules);
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
@@ -151,7 +154,6 @@ const CourseEdit = () => {
         const destMod = updated.find(m => m.id === destModuleId)!;
         const [moved] = srcMod.lessons.splice(source.index, 1);
         destMod.lessons.splice(destination.index, 0, moved);
-        // Auto-expand destination module
         if (sourceModuleId !== destModuleId) {
           destMod.isExpanded = true;
         }
@@ -162,26 +164,30 @@ const CourseEdit = () => {
 
   const totalLessons = modules.reduce((a, m) => a + m.lessons.length, 0);
 
+  const saveCourseInfo = () => {
+    toast({ title: "Đã lưu thông tin khóa học", description: "Thông tin cơ bản đã được cập nhật." });
+  };
+
+  const saveCurriculum = () => {
+    toast({ title: "Đã lưu giáo trình", description: `${modules.length} chương · ${totalLessons} bài học.` });
+  };
+
   return (
     <DashboardLayout title="Edit Course">
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => navigate("/courses")}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Back to Courses
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/courses/${id}`)}>
-            <Eye className="h-4 w-4 mr-1" /> Preview
-          </Button>
-          <Button size="sm" className="gradient-primary text-primary-foreground">
-            <Save className="h-4 w-4 mr-1" /> Save Changes
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/courses/${id}`)}>
+          <Eye className="h-4 w-4 mr-1" /> Preview
+        </Button>
       </div>
 
-      <Tabs defaultValue="curriculum" className="space-y-6">
+      <Tabs defaultValue="info" className="space-y-6">
         <TabsList>
           <TabsTrigger value="info"><Settings className="h-4 w-4 mr-1.5" /> Course Info</TabsTrigger>
           <TabsTrigger value="curriculum"><BookOpen className="h-4 w-4 mr-1.5" /> Curriculum</TabsTrigger>
+          <TabsTrigger value="students"><Users className="h-4 w-4 mr-1.5" /> Students</TabsTrigger>
         </TabsList>
 
         {/* ── Course Info Tab ── */}
@@ -235,6 +241,12 @@ const CourseEdit = () => {
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex justify-end">
+            <Button className="gradient-primary text-primary-foreground" onClick={saveCourseInfo}>
+              <Save className="h-4 w-4 mr-1" /> Save Course Info
+            </Button>
+          </div>
         </TabsContent>
 
         {/* ── Curriculum Tab ── */}
@@ -393,6 +405,17 @@ const CourseEdit = () => {
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex justify-end">
+            <Button className="gradient-primary text-primary-foreground" onClick={saveCurriculum}>
+              <Save className="h-4 w-4 mr-1" /> Save Curriculum
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* ── Student Management Tab ── */}
+        <TabsContent value="students">
+          <StudentManagement />
         </TabsContent>
       </Tabs>
 
