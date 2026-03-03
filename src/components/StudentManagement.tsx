@@ -23,6 +23,8 @@ interface Student {
   progress: number;
   completedLessons: string[];
   status: "active" | "inactive" | "completed";
+  assessmentScore: number | null;
+  assessmentStatus: "passed" | "failed" | "pending";
 }
 
 interface ClassGroup {
@@ -36,31 +38,31 @@ const initialStudents: Student[] = [
     id: 1, name: "Nguyễn Văn An", email: "an.nguyen@email.com",
     enrolledDate: "2025-01-15", progress: 75,
     completedLessons: ["What is React?", "Setting Up Environment", "Your First Component", "Functional Components", "Props Deep Dive"],
-    status: "active",
+    status: "active", assessmentScore: 82, assessmentStatus: "passed",
   },
   {
     id: 2, name: "Trần Thị Bình", email: "binh.tran@email.com",
     enrolledDate: "2025-02-01", progress: 45,
     completedLessons: ["What is React?", "Setting Up Environment", "Your First Component"],
-    status: "active",
+    status: "active", assessmentScore: 55, assessmentStatus: "failed",
   },
   {
     id: 3, name: "Lê Hoàng Cường", email: "cuong.le@email.com",
     enrolledDate: "2024-12-20", progress: 100,
     completedLessons: ["What is React?", "Setting Up Environment", "Your First Component", "Functional Components", "Props Deep Dive", "Component Patterns Slides", "useState Hook", "useEffect Hook"],
-    status: "completed",
+    status: "completed", assessmentScore: 95, assessmentStatus: "passed",
   },
   {
     id: 4, name: "Phạm Minh Đức", email: "duc.pham@email.com",
     enrolledDate: "2025-02-10", progress: 12,
     completedLessons: ["What is React?"],
-    status: "active",
+    status: "active", assessmentScore: null, assessmentStatus: "pending",
   },
   {
     id: 5, name: "Hoàng Thị Mai", email: "mai.hoang@email.com",
     enrolledDate: "2025-01-28", progress: 0,
     completedLessons: [],
-    status: "inactive",
+    status: "inactive", assessmentScore: null, assessmentStatus: "pending",
   },
 ];
 
@@ -75,6 +77,12 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   active: { label: "Đang học", variant: "default" },
   inactive: { label: "Không hoạt động", variant: "destructive" },
   completed: { label: "Hoàn thành", variant: "secondary" },
+};
+
+const assessmentStatusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  passed: { label: "Passed", variant: "default" },
+  failed: { label: "Failed", variant: "destructive" },
+  pending: { label: "Pending", variant: "outline" },
 };
 
 const StudentManagement = () => {
@@ -107,6 +115,8 @@ const StudentManagement = () => {
       progress: 0,
       completedLessons: [],
       status: "active",
+      assessmentScore: null,
+      assessmentStatus: "pending",
     };
     setStudents([student, ...students]);
     setNewStudent({ name: "", email: "" });
@@ -132,8 +142,8 @@ const StudentManagement = () => {
   };
 
   const exportCSV = () => {
-    const headers = ["Họ tên", "Email", "Ngày tham gia", "Tiến độ (%)", "Trạng thái"];
-    const rows = students.map(s => [s.name, s.email, s.enrolledDate, s.progress, statusConfig[s.status].label]);
+    const headers = ["Họ tên", "Email", "Ngày tham gia", "Tiến độ (%)", "Trạng thái", "Điểm KT", "Kết quả KT"];
+    const rows = students.map(s => [s.name, s.email, s.enrolledDate, s.progress, statusConfig[s.status].label, s.assessmentScore ?? "N/A", assessmentStatusConfig[s.assessmentStatus].label]);
     const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -221,6 +231,8 @@ const StudentManagement = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Ngày tham gia</TableHead>
                 <TableHead>Tiến độ</TableHead>
+                <TableHead>Điểm KT</TableHead>
+                <TableHead>Kết quả KT</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Thao tác</TableHead>
               </TableRow>
@@ -228,7 +240,7 @@ const StudentManagement = () => {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Không tìm thấy học viên nào.
                   </TableCell>
                 </TableRow>
@@ -243,6 +255,16 @@ const StudentManagement = () => {
                         <Progress value={student.progress} className="h-2 flex-1" />
                         <span className="text-xs font-medium w-9 text-right">{student.progress}%</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">
+                        {student.assessmentScore !== null ? student.assessmentScore : "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={assessmentStatusConfig[student.assessmentStatus].variant}>
+                        {assessmentStatusConfig[student.assessmentStatus].label}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusConfig[student.status].variant}>
