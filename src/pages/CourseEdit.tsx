@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ArrowLeft, Plus, GripVertical, Edit, Trash2, Video, FileText, Image,
-  Upload, ChevronDown, ChevronUp, Save, Eye, BookOpen, Settings, Users
+  Upload, ChevronDown, ChevronUp, Save, Eye, BookOpen, Settings, Users, ClipboardCheck
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useToast } from "@/hooks/use-toast";
 import StudentManagement from "@/components/StudentManagement";
+import AssessmentManagement from "@/components/AssessmentManagement";
 
 interface Lesson {
   id: number;
@@ -188,6 +189,7 @@ const CourseEdit = () => {
           <TabsTrigger value="info"><Settings className="h-4 w-4 mr-1.5" /> Course Info</TabsTrigger>
           <TabsTrigger value="curriculum"><BookOpen className="h-4 w-4 mr-1.5" /> Curriculum</TabsTrigger>
           <TabsTrigger value="students"><Users className="h-4 w-4 mr-1.5" /> Students</TabsTrigger>
+          <TabsTrigger value="assessment"><ClipboardCheck className="h-4 w-4 mr-1.5" /> Assessment</TabsTrigger>
         </TabsList>
 
         {/* ── Course Info Tab ── */}
@@ -416,6 +418,11 @@ const CourseEdit = () => {
         {/* ── Student Management Tab ── */}
         <TabsContent value="students">
           <StudentManagement />
+        </TabsContent>
+
+        {/* ── Assessment Tab ── */}
+        <TabsContent value="assessment">
+          <AssessmentManagement />
         </TabsContent>
       </Tabs>
 
